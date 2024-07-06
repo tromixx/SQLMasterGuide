@@ -187,3 +187,8 @@ GROUP BY client_id WITH ROLLUP
 -- = ANY is equal to IN operatior
 -- EXIST is more efficient than IN
 -- You can use sub queries for SELECT and FROM
+
+-- VIEWS
+CREATE VIEW important_query AS
+SELECT SUM(invoice_total) AS total_sales
+FROM invoices
