@@ -336,3 +336,89 @@ WHERE EXISTS (
     WHERE customers.customer_id = orders.customer_id
 );
 
+
+
+-- ================================
+-- Problems
+-- ================================
+
+-- Problem 1: Basic Query
+-- Retrieve the names and email addresses of customers from the customers table 
+-- who live in the state of 'CA'. Sort the results alphabetically by last_name.
+SELECT first_name, last_name, email
+FROM customers
+WHERE state = 'CA'
+ORDER BY last_name;
+
+-- Problem 2: Aggregates and GROUP BY
+-- Find the total number of orders and the average order amount for each customer. 
+-- Only include customers who have placed more than 2 orders.
+SELECT customer_id, COUNT(order_id) AS total_orders, AVG(order_total) AS avg_order_amount
+FROM orders
+GROUP BY customer_id
+HAVING COUNT(order_id) > 2;
+
+-- Problem 3: Joining Tables
+-- Retrieve the names of customers and the names of products they ordered. 
+-- Include only customers who have placed at least one order.
+SELECT c.first_name, c.last_name, p.name AS product_name
+FROM customers c
+JOIN orders o ON c.customer_id = o.customer_id
+JOIN order_items oi ON o.order_id = oi.order_id
+JOIN products p ON oi.product_id = p.product_id;
+
+-- Problem 4: Subqueries
+-- Find the names of customers who have spent more than the average total order amount across all customers.
+SELECT first_name, last_name
+FROM customers c
+WHERE customer_id IN (
+    SELECT customer_id
+    FROM orders
+    GROUP BY customer_id
+    HAVING SUM(order_total) > (
+        SELECT AVG(order_total)
+        FROM orders
+    )
+);
+
+-- Problem 5: T-SQL with CTE and Transactions
+-- Create a stored procedure that increases the price of all products in a specific category by 10%.
+-- The category name should be passed as a parameter.
+CREATE PROCEDURE IncreaseProductPrices
+    @CategoryName NVARCHAR(50)
+AS
+BEGIN
+    BEGIN TRANSACTION;
+    BEGIN TRY
+        UPDATE p
+        SET p.price = p.price * 1.10
+        FROM products p
+        JOIN categories c ON p.category_id = c.category_id
+        WHERE c.name = @CategoryName;
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+        PRINT ERROR_MESSAGE();
+    END CATCH;
+END;
+
+-- Usage Example:
+EXEC IncreaseProductPrices @CategoryName = 'Electronics';
+
+-- Bonus Problem: Recursive Query
+-- Using a WITH clause, retrieve a hierarchy of employees starting from the CEO 
+-- (who has manager_id = NULL). Display their name and level in the hierarchy.
+WITH EmployeeHierarchy AS (
+    SELECT employee_id, first_name, last_name, manager_id, 0 AS level
+    FROM employees
+    WHERE manager_id IS NULL
+    UNION ALL
+    SELECT e.employee_id, e.first_name, e.last_name, e.manager_id, eh.level + 1
+    FROM employees e
+    JOIN EmployeeHierarchy eh ON e.manager_id = eh.employee_id
+)
+SELECT first_name, last_name, level
+FROM EmployeeHierarchy
+ORDER BY level, first_name;
