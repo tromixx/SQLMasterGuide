@@ -190,3 +190,149 @@ END;
 BEGIN TRANSACTION;
 UPDATE employees SET salary = salary + 1000 WHERE id = 1;
 COMMIT;
+
+-- ================================
+-- Section 10: T-SQL Specific Concepts
+-- ================================
+
+-- Control-of-Flow Statements
+IF EXISTS (SELECT * FROM customers WHERE points > 1000)
+BEGIN
+    PRINT 'High-value customers exist.';
+END
+ELSE
+BEGIN
+    PRINT 'No high-value customers found.';
+END;
+
+-- Error Handling with TRY...CATCH
+BEGIN TRY
+    UPDATE orders SET order_date = NULL WHERE order_id = 1;
+END TRY
+BEGIN CATCH
+    PRINT ERROR_MESSAGE();
+END CATCH;
+
+-- Dynamic SQL
+DECLARE @sql NVARCHAR(MAX) = 'SELECT * FROM customers WHERE state = ''CA''';
+EXEC sp_executesql @sql;
+
+-- Temporary Tables
+CREATE TABLE #TempTable (ID INT, Name VARCHAR(50));
+INSERT INTO #TempTable VALUES (1, 'TempUser');
+SELECT * FROM #TempTable;
+
+-- Common Table Expressions (CTEs)
+WITH SalesCTE AS (
+    SELECT client_id, SUM(invoice_total) AS total_sales
+    FROM invoices
+    GROUP BY client_id
+)
+SELECT * FROM SalesCTE WHERE total_sales > 1000;
+
+-- ================================
+-- Section 11: Advanced SQL Concepts
+-- ================================
+
+-- Recursive Queries
+WITH RecursiveCTE AS (
+    SELECT employee_id, manager_id
+    FROM employees
+    WHERE manager_id IS NULL
+    UNION ALL
+    SELECT e.employee_id, e.manager_id
+    FROM employees e
+    JOIN RecursiveCTE r ON e.manager_id = r.employee_id
+)
+SELECT * FROM RecursiveCTE;
+
+-- PIVOT Example
+SELECT *
+FROM (
+    SELECT product_id, year, sales
+    FROM sales_data
+) AS SourceTable
+PIVOT (
+    SUM(sales) FOR year IN ([2021], [2022])
+) AS PivotTable;
+
+-- Full-Text Search
+SELECT * 
+FROM documents 
+WHERE CONTAINS(content, 'SQL');
+
+-- JSON Functions
+SELECT JSON_VALUE(data, '$.name') AS name
+FROM customers;
+
+-- XML Functions
+SELECT *
+FROM orders
+WHERE xml_data.exist('/Order[CustomerID="123"]') = 1;
+
+-- ================================
+-- Section 12: Indexing and Optimization
+-- ================================
+
+-- Covering Index
+CREATE NONCLUSTERED INDEX idx_covering
+ON orders (order_date)
+INCLUDE (customer_id, total_amount);
+
+-- Execution Plan Analysis
+SET STATISTICS TIME ON;
+SELECT * FROM customers;
+
+-- Partitioning
+CREATE PARTITION FUNCTION myPartitionFunction (INT)
+AS RANGE LEFT FOR VALUES (1, 100, 1000);
+
+-- ================================
+-- Section 13: Security and Permissions
+-- ================================
+
+-- Granting Permissions
+GRANT SELECT ON customers TO user1;
+
+-- Revoking Permissions
+REVOKE SELECT ON customers FROM user1;
+
+-- Row-Level Security
+CREATE SECURITY POLICY SalesFilter
+WITH (STATE = ON)
+AS
+ADD FILTER PREDICATE dbo.FilterPredicate(client_id)
+ON dbo.invoices;
+
+-- ================================
+-- Section 14: Functions
+-- ================================
+
+-- User-Defined Function (UDF)
+CREATE FUNCTION GetDiscountedPrice (@price DECIMAL, @discount DECIMAL)
+RETURNS DECIMAL
+AS
+BEGIN
+    RETURN @price - (@price * @discount / 100);
+END;
+
+-- Example Usage of Function
+SELECT dbo.GetDiscountedPrice(100, 10) AS DiscountedPrice;
+
+-- ================================
+-- Section 15: Miscellaneous Concepts
+-- ================================
+
+-- Stored Generated Columns
+ALTER TABLE customers
+ADD full_name AS (first_name + ' ' + last_name);
+
+-- Using EXISTS Instead of IN
+SELECT customer_id
+FROM customers
+WHERE EXISTS (
+    SELECT 1
+    FROM orders
+    WHERE customers.customer_id = orders.customer_id
+);
+
